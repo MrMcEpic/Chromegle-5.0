@@ -1,4 +1,5 @@
-importScripts('core.js');
+// Chromium runs this as a service worker; Firefox loads core.js first via background.scripts.
+if (typeof importScripts === 'function') importScripts('core.js');
 const C = ChromegleCore;
 const ENDPOINT = 'https://m52o1m3c29.execute-api.eu-central-1.amazonaws.com/prod/geoip2';
 const cache = new Map();
@@ -7,17 +8,20 @@ let nextLookup = 0;
 let writes = Promise.resolve();
 const panels = new Map();
 // Set on every service-worker start, including browser/extension reloads.
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+if (chrome.sidePanel) chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+// Firefox: toggle the native sidebar synchronously inside the click handler.
+else chrome.action.onClicked.addListener(() => { browser.sidebarAction.toggle(); });
 chrome.runtime.onInstalled.addListener(async () => {
   const data = await chrome.storage.local.get('settings');
   if (!data.settings) await chrome.storage.local.set({ settings: C.defaults, blocked: [], notes: {} });
-  await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS' });
+  if (chrome.storage.local.setAccessLevel) await chrome.storage.local.setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS' });
 });
 function allowed(sender) {
   if (sender.id !== chrome.runtime.id) return false;
   try {
     const url = new URL(sender.url);
-    return (url.protocol === 'chrome-extension:' && url.hostname === chrome.runtime.id) || (url.protocol === 'https:' && ['umingle.com','www.umingle.com'].includes(url.hostname) && sender.frameId === 0);
+    // Firefox extension pages are moz-extension://<internal UUID>, not the extension id.
+    return url.origin === new URL(chrome.runtime.getURL('')).origin || (url.protocol === 'https:' && ['umingle.com','www.umingle.com'].includes(url.hostname) && sender.frameId === 0);
   } catch { return false; }
 }
 function extensionPage(sender) {
@@ -107,7 +111,8 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
   }
   if (message.action === 'open-sidebar' && contentPage(sender) && Number.isInteger(sender.tab.windowId)) {
     // No awaited work before open: preserve activation from the content script.
-    task = chrome.sidePanel.open({ windowId: sender.tab.windowId });
+    // Firefox cannot open its sidebar from a content-script gesture; resolve so sidebar.js stops trying.
+    task = chrome.sidePanel ? chrome.sidePanel.open({ windowId: sender.tab.windowId }) : Promise.resolve();
   }
   else if (message.action === 'geo' && (contentPage(sender) || extensionPage(sender))) task = lookup(C.ip(message.ip));
   else if (message.action === 'encounter' && contentPage(sender)) {

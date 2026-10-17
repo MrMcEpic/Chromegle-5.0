@@ -1,6 +1,6 @@
 # Chromegle 6.0
 
-A Manifest V3 extension for Chromium/Edge 116+ on `https://umingle.com` and `https://www.umingle.com`.
+A Manifest V3 extension for Chromium/Edge 121+ and Firefox 142+ on `https://umingle.com` and `https://www.umingle.com`.
 
 ## Install / update
 
@@ -8,6 +8,10 @@ A Manifest V3 extension for Chromium/Edge 116+ on `https://umingle.com` and `htt
 2. Disable older Chromegle extensions and reload existing Umingle tabs so old hooks are removed.
 3. The native browser sidebar opens on your first click or keypress in Umingle. Chrome requires a user gesture, so it cannot open immediately on page load. The extension toolbar icon also opens it. If you close it, it stays closed for the rest of that page visit.
 4. Use Settings for preferences, blocked IPs and saved notes.
+
+### Firefox
+
+The same folder works in Firefox 142+. For a quick test, open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on…** and select `manifest.json` (removed when Firefox closes). Release Firefox only installs signed add-ons permanently: sign an unlisted copy with your own AMO API keys using `npx web-ext sign --channel unlisted`, then open the resulting `.xpi` in Firefox. Open the sidebar from the toolbar icon or View → Sidebar; Firefox does not allow opening it from a click inside the page.
 
 No build step, API key or account is required. Existing notes and block lists keep their storage keys. Legacy face/report and older hide/crop settings are ignored; the new face-presence preference starts disabled.
 

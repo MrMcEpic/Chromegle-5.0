@@ -63,7 +63,10 @@
     const video = rows.filter(r => r.type === 'inbound-rtp' && (r.kind || r.mediaType) === 'video' && trackIds.includes(r.trackIdentifier));
     const transports = [...new Set(video.map(r => r.transportId).filter(Boolean))];
     // Never fall back to an arbitrary successful pair or a local candidate.
-    const remotes = transports.map(id => stats.get(stats.get(id)?.selectedCandidatePairId)).filter(p => p?.state === 'succeeded').map(p => stats.get(p.remoteCandidateId)).filter(r => r?.type === 'remote-candidate');
+    let pairs = transports.map(id => stats.get(stats.get(id)?.selectedCandidatePairId));
+    // Firefox has no RTCTransportStats; it flags the active pair with a non-standard `selected`.
+    if (!pairs.some(Boolean)) pairs = rows.filter(r => r.type === 'candidate-pair' && r.selected === true);
+    const remotes = [...new Set(pairs.filter(p => p?.state === 'succeeded').map(p => stats.get(p.remoteCandidateId)).filter(r => r?.type === 'remote-candidate'))];
     if (remotes.length !== 1) return null;
     return remotes[0];
   }

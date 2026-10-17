@@ -21,7 +21,10 @@
     },
     selectedRemote(stats, ids) {
       const transports = [...new Set([...stats.values()].filter(r => r.type === 'inbound-rtp' && (r.kind || r.mediaType) === 'video' && ids.includes(r.trackIdentifier)).map(r => r.transportId).filter(Boolean))];
-      const remotes = transports.map(id => stats.get(stats.get(id)?.selectedCandidatePairId)).filter(p => p?.state === 'succeeded').map(p => stats.get(p.remoteCandidateId)).filter(r => r?.type === 'remote-candidate');
+      let pairs = transports.map(id => stats.get(stats.get(id)?.selectedCandidatePairId));
+      // Firefox has no RTCTransportStats; it flags the active pair with a non-standard `selected`.
+      if (!pairs.some(Boolean)) pairs = [...stats.values()].filter(r => r.type === 'candidate-pair' && r.selected === true);
+      const remotes = [...new Set(pairs.filter(p => p?.state === 'succeeded').map(p => stats.get(p.remoteCandidateId)).filter(r => r?.type === 'remote-candidate'))];
       return remotes.length === 1 ? remotes[0] : null;
     }
   };
